@@ -40,3 +40,10 @@ version = '0.0.2'
 Homepage = "https://github.com/spesmilo/electrum-ecc"
 Repository = "https://github.com/spesmilo/electrum-ecc"
 
+[tool.setuptools]
+include-package-data = false
+
+[tool.setuptools.package-data]
+# "*" = ["*.c", "*.h", "*.md", "*.ac", "*.am", "*.pc.in", "*.json", "*.include", "*.s", "*COPYING"]
+#libsecp256k1 = ["*.c", "*.h", "*.md", "*.ac", "*.am", "*.pc.in", "*.json", "*.include", "*.s", "*COPYING"]
+"libsecp256k1" = ["**"]

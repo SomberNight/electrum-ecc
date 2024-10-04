@@ -23,24 +23,25 @@ def absolute(*paths):
 
 
 def compile_secp(build_dir: str) -> None:
-    if not os.path.exists(absolute('libsecp256k1')):
-        raise Exception("missing git submodule secp256k1")
+    secp_src = os.path.join('src', 'libsecp256k1')
+    if not os.path.exists(absolute(secp_src)):
+        raise Exception(f"missing git submodule secp256k1: {absolute(secp_src)}")
 
-    if not os.path.exists(absolute('libsecp256k1/configure')):
+    if not os.path.exists(absolute(secp_src, 'configure')):
         # configure script hasn't been generated yet
-        autogen = absolute('libsecp256k1/autogen.sh')
-        os.chmod(absolute(autogen), 0o755)
-        subprocess.check_call([autogen], cwd=absolute('libsecp256k1'))
+        autogen = absolute(secp_src, 'autogen.sh')
+        os.chmod(autogen, 0o755)
+        subprocess.check_call([autogen], cwd=absolute(secp_src))
 
     for filename in [
-        'libsecp256k1/configure',
-        'libsecp256k1/build-aux/compile',
-        'libsecp256k1/build-aux/config.guess',
-        'libsecp256k1/build-aux/config.sub',
-        'libsecp256k1/build-aux/depcomp',
-        'libsecp256k1/build-aux/install-sh',
-        'libsecp256k1/build-aux/missing',
-        'libsecp256k1/build-aux/test-driver',
+        f'{secp_src}/configure',
+        f'{secp_src}/build-aux/compile',
+        f'{secp_src}/build-aux/config.guess',
+        f'{secp_src}/build-aux/config.sub',
+        f'{secp_src}/build-aux/depcomp',
+        f'{secp_src}/build-aux/install-sh',
+        f'{secp_src}/build-aux/missing',
+        f'{secp_src}/build-aux/test-driver',
     ]:
         try:
             os.chmod(absolute(filename), 0o755)
@@ -52,7 +53,7 @@ def compile_secp(build_dir: str) -> None:
                 raise
 
     cmd = [
-        absolute('libsecp256k1/configure'),
+        absolute(secp_src, 'configure'),
         '--enable-shared',
         '--disable-static',
         '--disable-dependency-tracking',
