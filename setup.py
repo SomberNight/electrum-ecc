@@ -1,4 +1,7 @@
+# based on https://github.com/ludbb/secp256k1-py/blob/f5e455227bf1e833128adf80de8ee0ebcebf218c/setup.py
+
 import errno
+import logging
 import os
 import os.path
 import platform
@@ -6,10 +9,11 @@ import shutil
 import subprocess
 
 from setuptools import setup
-from wheel.bdist_wheel import bdist_wheel as _bdist_wheel  # TODO declare dependence on wheel?
-from wheel.bdist_wheel import safer_name
+from wheel.bdist_wheel import bdist_wheel as _bdist_wheel
+from wheel.bdist_wheel import safer_name, get_platform
 
 
+_logger = logging.getLogger("electrum_ecc")
 MAKE = 'gmake' if platform.system() in ['FreeBSD', 'OpenBSD'] else 'make'
 
 
@@ -66,7 +70,7 @@ def compile_secp(build_dir: str) -> None:
         '--enable-exhaustive-tests=no',
     ]
 
-    print('Running configure: {}'.format(' '.join(cmd)))  # FIXME use logger?
+    _logger.info('Running configure: {}'.format(' '.join(cmd)))
     subprocess.check_call(cmd, cwd=build_dir)
 
     subprocess.check_call([MAKE], cwd=build_dir)
@@ -74,7 +78,17 @@ def compile_secp(build_dir: str) -> None:
 
 
 class bdist_wheel(_bdist_wheel):
-    def run(self):
+
+    def finalize_options(self):
+        # Inject the platform name, e.g. "linux_x86_64".
+        # This will result in the final build artifact being named e.g.
+        #   electrum_ecc-0.0.2-py3-none-linux_x86_64.whl
+        self.plat_name = get_platform(self.bdist_dir)
+        # note: we don't set the python "impl tag" or the "abi tag", as the C lib we build
+        #       does not depend on them (it is not a "C extension" as we don't static link cpython).
+        _bdist_wheel.finalize_options(self)
+
+    def _build_and_copy_secp_lib(self):
         _build_cmd = self.get_finalized_command('build')
         build_dir = os.path.join(_build_cmd.build_base, "temp_libsecp")
         target_dir = os.path.join(self.bdist_dir, safer_name(self.distribution.get_name()))
@@ -93,8 +107,12 @@ class bdist_wheel(_bdist_wheel):
                     fname.endswith(".so") or fname.endswith(".dll") or fname.endswith(".dylib")
                     or ".so." in fname  # FIXME symlink duplication
             ):
-                shutil.copy(os.path.join(build_temp_libs, fname), target_dir)
+                srcpath = os.path.join(build_temp_libs, fname)
+                _logger.info(f"copying file {srcpath!r} to {target_dir=}")
+                shutil.copy2(srcpath, target_dir)
 
+    def run(self):
+        self._build_and_copy_secp_lib()
         _bdist_wheel.run(self)
 
 
